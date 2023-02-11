@@ -16,6 +16,7 @@ rooms = {} #store Room objects {"room_name": obj}
 connect_threads = []
 message_threads = []
 room_thrads = []
+general_settings = {"auto_load_messages_maximum": 100}
 
 class Room():
     """
@@ -28,6 +29,7 @@ class Room():
         self.__messages = []
         self.__id = random.randint(0, 32767)
         self.__name = name
+        self.__settings = {"auto_load_messages": True, "auto_load_messages_number": 25}
         print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] new room got created"+Tc.RESET)
     
     def new_member(self, username:str, conn:socket.socket, adrr:tuple, overrride:bool = False):
@@ -37,6 +39,7 @@ class Room():
         else:
             self.__members[username] = (conn, adrr)
         print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] added member",username,"to the room"+Tc.RESET)
+        self.send_data(username+" joined the room", "", list(self.__members.keys()))
 
     def remove_member(self, username:str) -> bool:
         try:
@@ -45,11 +48,52 @@ class Room():
             return False
         else:
             print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] removed",username,"from the room"+Tc.RESET)
+            self.send_data(username+" left the room", "", list(self.__members.keys()))
             return True
 
     def get_members(self) -> dict:
         return list(self.__members.keys())
     
+    def recieved_data(self, data:str, sender:str):
+        print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] got data", data, "from", sender + Tc.RESET)
+        if data.split()[0] == "/load":
+            try:
+                count = int(data.split()[1])
+            except: 
+                count = self.__settings["auto_load_messages_number"]
+            self.load_recent_messages(count, sender)
+        else:
+            self.__messages.append({sender: data})
+            receiver = []
+            for target in self.__members.keys():
+                if not target == sender:
+                    receiver.append(target)
+            self.send_data(data, sender, receiver)
+
+    def send_data(self, message:str, sender:str, recipients:list):
+        for target in recipients:
+            try:
+                if not sender == "":
+                    sender = "["+sender+"] "
+                self.__members[target][0].send((sender+message).encode(FORMAT))
+            except:
+                print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] error occured while sending message to members"+Tc.RESET)
+
+    def load_recent_messages(self, count:int, requester:str):
+        length = len(self.__messages)
+        pos = 0
+        if count < length:
+            pos = length - count
+        if count > general_settings["auto_load_messages_maximum"]:
+            pos = length - general_settings["auto_load_messages_maximum"]
+        self.send_data("-- loading recent messages --", "", list(requester))
+        time.sleep(0.05)
+        while pos < length:
+            self.send_data(list(self.__messages[pos].values())[0], list(self.__messages[pos].keys())[0], list(requester))
+            pos += 1
+            time.sleep(0.05)
+        self.send_data("-- done loading recent messages --", "", list(requester))
+
     def get_stats(self) -> str:
         string = Tc.Fg.CYAN
         string += "Information about the Room " + str(self.__id) + ":\n"
@@ -70,16 +114,6 @@ class Room():
         string += "Total messages: " + str(len(self.__messages))
         string += Tc.RESET
         return string
-    
-    def recieved_message(self, message:str, sender:str):
-        print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] got message", message, "from", sender + Tc.RESET)
-        self.__messages.append({sender: message})
-        try:
-            for user in self.__members:
-                #if user != sender:
-                self.__members[user][0].send(("["+sender+"] "+message).encode(FORMAT))
-        except:
-            print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] error occured while sending message to members"+Tc.RESET)
 
 def listen_for_connections(limit:int = 0) -> object:
     interface = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -248,7 +282,7 @@ def console_manager():
 
 def message_listener(usr_obj:socket.socket, username:str, user_room:str):
     #{"username": {"room": "room_id", object: obj}}
-    print(Tc.Fg.PURPLE+"[MESSAGE LISTENER] for", username, "in room", user_room, "started"+Tc.RESET)
+    print(Tc.Fg.PURPLE+"[MESSAGE LISTENER - " + username + "] for", username, "in room", user_room, "started"+Tc.RESET)
     while True:
         try:
             data = usr_obj.recv(2048)
@@ -257,7 +291,10 @@ def message_listener(usr_obj:socket.socket, username:str, user_room:str):
         if not data:
             break
         else:
-            rooms[user_room].recieved_message(data.decode(FORMAT), username)
+            try:
+                rooms[user_room].recieved_data(data.decode(FORMAT), username)
+            except Exception as error:
+                print(Tc.Fg.PURPLE+"[MESSAGE LISTENER - " + username + "] error "+ str(error) + " occurred, while recieving data" + data.decode(FORMAT) + Tc.RESET)
     print(Tc.Fg.PURPLE+"[MESSAGE LISTENER] user", username, "disconnected"+Tc.RESET)
     rooms[user_room].remove_member(username)
     usernames.pop(username)
