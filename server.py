@@ -95,7 +95,7 @@ class Room():
         self.send_data("-- done loading recent messages --", "", list(requester))
 
     def get_stats(self) -> str:
-        string = Tc.Fg.CYAN
+        string = ""
         string += "Information about the Room " + str(self.__id) + ":\n"
         string += "Member count: " + str(len(self.__members)) + "\n"
         string += "Members: " 
@@ -107,12 +107,12 @@ class Room():
                 pass
             else:
                 string += username + ", "
+        string = string.strip(", ")
         if len(members) > 10:
             string += "...\n"
         else:
             string += "\n"
         string += "Total messages: " + str(len(self.__messages))
-        string += Tc.RESET
         return string
 
 def listen_for_connections(limit:int = 0) -> object:
@@ -207,6 +207,7 @@ def console_manager():
             string += "Commands for the chat.py server:\n"
             string += "/help: brings up this command overview message\n"
             string += "/rooms: lists 10 objects, if -all argument provided it will show all rooms (might take a while)\n"
+            string += "/room room_name: displays informations about the room\n"
             string += "/members: lists 20 users, if -all argument provided it will show all users (might take a while)\n"
             string += "/threads: lists 10 active threads, if -debug argument provided it will show a list with all threads (might take a while)\n"
             string += "/quit: shutdown the server (it is just quit()) WIP"
@@ -232,11 +233,11 @@ def console_manager():
             if debug:
                 string += str(rooms)
 
-        # elif command[0] == "/room":
-        #     try:
-        #             string += rooms[command[1]].get_stats()
-        #     except:
-        #         string += "Room", command[1], "does not exist"
+        elif command[0] == "/room":
+            try:
+                    string += rooms[command[1]].get_stats()
+            except:
+                string += "Room does not exist"
 
         elif command[0] == "/members":
             string += "Current Members ("+str(len(list(usernames.keys())))+"):\n"
