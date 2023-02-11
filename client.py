@@ -7,7 +7,7 @@ from ascii_color import *
 print(Tc.Fg.LIGHTBLUE+"[STARTUP] Client stated!"+Tc.RESET)
 
 interface = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-IP_ADRR = "REPLACE WITH SERVER IP"
+IP_ADRR = "localhost"
 PORT = 5050
 VERSION = "0.0"
 FORMAT = "utf-8"

@@ -2,13 +2,13 @@ import socket
 import threading
 import time
 import random
+import psutil
 from ascii_color import *
 
 print(Tc.Fg.LIGHTBLUE+"[STARTUP] Initializing ..."+Tc.RESET)
 beginning = time.time()
 
 PORT = 5050
-ADRESS = socket.gethostbyname(socket.gethostname())
 VERSION = "0.0"
 FORMAT = "utf-8"
 usernames = {} #store usernames and the id of the room they are in {"username": {"room": "room_id", object: obj}}
@@ -264,6 +264,35 @@ def message_listener(usr_obj:socket.socket, username:str, user_room:str):
     message_threads.remove(threading.current_thread())
 
 print(Tc.Fg.LIGHTGREEN+"[STARTUP] Initialized in", str(round(time.time()-beginning, 5)),"sec"+Tc.RESET)
+
+nics = psutil.net_if_addrs()
+if len(nics.keys()) > 2:
+    print(Tc.Fg.BLUE+"[STARTUP] found more than 1 nic, specify the right one"+Tc.RESET)
+    number = 1
+    string = Tc.Fg.BLUE
+    available_nics = []
+    for key in nics.keys():
+        address = nics[key][0][1]
+        if address != "127.0.0.1":
+            string += " - " + str(number) + ": " + str(address) + " (" + key + ")"+"\n"
+            available_nics.append(address)
+            number += 1
+    while True:
+        try:
+            print(string.strip("\n")+Tc.RESET)
+            choise = int(input(Tc.Fg.YELLOW+"[STARTUP] Specify the identifier of the desired interface (1-"+str(number)+") "+Tc.RESET))-1
+            chosen_adrr = available_nics[choise]
+        except ValueError:
+            print(Tc.Fg.RED+"[STARTUP] The identifier is not a number"+Tc.RESET)
+        except IndexError:
+            print(Tc.Fg.RED+"[STARTUP] The specified interface does not exist"+Tc.RESET)
+        else:
+            break
+    print(Tc.Fg.BLUE+"[STARTUP] Input accepted. Interface with the address " + available_nics[choise] + " selected"+Tc.RESET)
+    ADRESS = chosen_adrr
+else:
+    ADRESS = socket.gethostbyname(socket.gethostname())
+
 print(Tc.Fg.LIGHTBLUE+"[STARTUP] Starting Server ..."+Tc.RESET)
 beginning = time.time()
 console = threading.Thread(target=console_manager, name="console-manager")
