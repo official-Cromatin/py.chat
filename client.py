@@ -7,7 +7,7 @@ from ascii_color import *
 print(Tc.Fg.LIGHTBLUE+"[STARTUP] Client stated!"+Tc.RESET)
 
 interface = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-IP_ADRR = "localhost"
+IP_ADRR = "192.168.178.18"
 PORT = 5050
 VERSION = "0.0"
 FORMAT = "utf-8"
@@ -48,11 +48,13 @@ while True:
                     print(Tc.Fg.LIGHTGREEN+"Room ok"+Tc.RESET)
                 elif req == "room_not_ok":
                     print(Tc.Fg.RED+"Room does not exist"+Tc.RESET)
-                    interface.send(input(Tc.Fg.YELLOW+"Wold you like to create it? [y/n] "+Tc.RESET).encode(FORMAT))
+                    interface.send(input(Tc.Fg.YELLOW+"Would you like to create it? [y/n] "+Tc.RESET).encode(FORMAT))
                     #interface.send("y".encode(FORMAT))
                 elif req == "handshake_ok":
                     print(Tc.Fg.GREEN+"[STARTUP] Handshake process successful."+Tc.RESET)
                     break
+                else:
+                    print(req)
         except:
             print(Tc.Fg.LIGHTBLUE+"[STARTUP] Lost connection to server during startup"+Tc.RESET)
         break
