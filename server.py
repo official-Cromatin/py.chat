@@ -36,7 +36,12 @@ class Room():
     def new_member(self, username:str, socket_object:socket.socket, address:tuple):
         self.__members[username] = {"socket_object": socket_object, "address": address, "permissions": {}}
         print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] added member",username,"to the room"+Tc.RESET)
+        self.send_data("Welcome to " + self.__name + ", use /help to see all commands", "", [username])
+        time.sleep(0.05)
         self.send_data(username+" joined the room", "", list(self.__members.keys()))
+        time.sleep(0.05)
+        if len(self.__messages) > 0:
+            self.load_recent_messages(self.__settings["load_messages_number"], username)
 
     def remove_member(self, username:str) -> bool:
         try:
@@ -54,20 +59,23 @@ class Room():
     
     def recieved_data(self, data:str, sender:str):
         print(Tc.Fg.CYAN+"[ROOM",str(self.__id)+"-"+self.__name+"] received data", data, "from", sender + Tc.RESET)
-        if data.split()[0] == "/load":
+        splited_data = data.split()
+        if splited_data[0] == "/help":
+            self.send_data("Following commands are available:\n/stats: Lists informations about the room you are in\n/load count: Loads recent messages at the given number \n/settings (Only available for the Owner): Change settings of the room", "", [sender])
+        elif splited_data[0] == "/load":
             try:
-                count = int(data.split()[1])
+                count = int(splited_data[1])
             except: 
                 count = self.__settings["load_messages_number"]
             self.load_recent_messages(count, sender)
-        elif data.split()[0] == "/stats":
+        elif splited_data[0] == "/stats":
             stats = self.get_stats()
             self.send_data(stats, "", [sender])
-        elif data.split()[0] == "/settings":
+        elif splited_data[0] == "/settings":
             if sender == self.__owner:
                 try:
-                    setting = data.split()[1]
-                    value = data.split()[2]
+                    setting = splited_data[1]
+                    value = splited_data[2]
                     if setting in self.__settings:
                         if setting == "load_messages_number":
                             if value > general_settings["load_messages_number_maximum"]:
@@ -83,6 +91,8 @@ class Room():
                         self.send_data(key+": "+str(value), "", [sender])
                         time.sleep(0.05)
                     self.send_data("To change a setting, use the following command scheme: \n/settings settingsname value example: /settings load_messages_number 30", "", [sender])
+                else:
+                    self.send_data("Setting changed successfully", "", [sender])
             else:
                 self.send_data("You are not the Owner of this Room!", "", [sender])
         else:
